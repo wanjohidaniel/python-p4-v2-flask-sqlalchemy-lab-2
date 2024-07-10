@@ -25,12 +25,18 @@ class Customer(db.Model, SerializerMixin):
         return {
             'id': self.id,
             'name': self.name,
-            'items': [item.to_dict() for item in self.items],
-            'reviews': [review.to_dict() for review in self.reviews]
+            'items': [item.to_dict_no_reviews() for item in self.items if item],
+            'reviews': [review.to_dict_no_customer() for review in self.reviews]
+        }
+
+    def to_dict_no_reviews(self):
+        return {
+            'id': self.id,
+            'name': self.name
         }
 
     def serialize(self):
-        return SerializerMixin.serialize(self, exclude=('reviews.customer',))
+        return SerializerMixin.serialize(self, exclude=('reviews.customer', 'reviews.item.reviews', 'reviews.item.reviews.item'))
 
 class CustomerItem(db.Model):
     __tablename__ = 'customer_items'
@@ -59,11 +65,18 @@ class Item(db.Model, SerializerMixin):
             'id': self.id,
             'name': self.name,
             'price': self.price,
-            'reviews': [review.to_dict() for review in self.reviews]
+            'reviews': [review.to_dict_no_item() for review in self.reviews]
+        }
+
+    def to_dict_no_reviews(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'price': self.price
         }
 
     def serialize(self):
-        return SerializerMixin.serialize(self, exclude=('reviews.item',))
+        return SerializerMixin.serialize(self, exclude=('reviews.item', 'reviews.customer.reviews', 'reviews.customer.reviews.customer'))
 
 class Review(db.Model, SerializerMixin):
     __tablename__ = 'reviews'
@@ -86,8 +99,22 @@ class Review(db.Model, SerializerMixin):
         return {
             'id': self.id,
             'comment': self.comment,
-            'customer_id': self.customer_id,
+            'customer': self.customer.to_dict_no_reviews(),
+            'item': self.item.to_dict_no_reviews()
+        }
+
+    def to_dict_no_customer(self):
+        return {
+            'id': self.id,
+            'comment': self.comment,
             'item_id': self.item_id
+        }
+
+    def to_dict_no_item(self):
+        return {
+            'id': self.id,
+            'comment': self.comment,
+            'customer_id': self.customer_id
         }
 
     def serialize(self):
